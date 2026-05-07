@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { FiLock } from 'react-icons/fi';
 import AvatarImg from './components/AvatarImg';
 import BootScreen from './components/BootScreen';
@@ -59,6 +59,73 @@ const MOBILE_SECTIONS = [
   { id: 'contact', label: 'Contact', content: <ContactWindow /> },
 ];
 
+function MobileDesktopNudge() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem('nudge_dismissed')) return;
+    const t = setTimeout(() => setVisible(true), 1500);
+    return () => clearTimeout(t);
+  }, []);
+
+  const dismiss = () => {
+    setVisible(false);
+    sessionStorage.setItem('nudge_dismissed', '1');
+  };
+
+  if (!visible) return null;
+
+  return (
+    <div style={nudgeStyle}>
+      <span style={{ fontSize: 22, flexShrink: 0 }}>🖥️</span>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 700, fontSize: 13, color: '#1c1c1e', marginBottom: 2 }}>
+          You're missing the full experience!
+        </div>
+        <div style={{ fontSize: 12, color: '#6e6e73', lineHeight: 1.5 }}>
+          Open on a <strong>PC or Mac</strong> to explore a real macOS Desktop — draggable windows, dock, boot screen & more.
+        </div>
+      </div>
+      <button onClick={dismiss} style={nudgeDismiss} title="Dismiss">✕</button>
+    </div>
+  );
+}
+
+const nudgeStyle = {
+  position: 'fixed',
+  bottom: 20,
+  left: 16,
+  right: 16,
+  background: 'rgba(255,255,255,0.96)',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  border: '1px solid rgba(0,0,0,0.1)',
+  borderRadius: 14,
+  boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+  padding: '14px 16px',
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: 12,
+  zIndex: 9999,
+  animation: 'nudgeSlideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+};
+
+const nudgeDismiss = {
+  background: 'rgba(0,0,0,0.06)',
+  border: 'none',
+  borderRadius: '50%',
+  width: 24,
+  height: 24,
+  fontSize: 11,
+  cursor: 'pointer',
+  color: '#6e6e73',
+  flexShrink: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontFamily: 'inherit',
+};
+
 export default function App() {
   const [booting, setBooting] = useState(true);
   const [locked, setLocked] = useState(false);
@@ -95,7 +162,10 @@ export default function App() {
 
   // Let child components (e.g. AboutWindow's "Start a Project") open windows
   useEffect(() => {
-    const handler = (e) => openWindow(e.detail);
+    const handler = (e) => {
+      openWindow(e.detail);
+      setMobileTab(e.detail); // also switch mobile tab
+    };
     window.addEventListener('openWindow', handler);
     return () => window.removeEventListener('openWindow', handler);
   }, [openWindow]);
@@ -141,6 +211,7 @@ export default function App() {
       {/* ── Mobile UI (≤768px) ── */}
       <div className="mobile-layout">
         {locked && <LockScreen onUnlock={() => setLocked(false)} />}
+        <MobileDesktopNudge />
 
         {/* Sticky header + nav wrapper */}
         <div className="mobile-sticky-top">
